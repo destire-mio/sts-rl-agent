@@ -27,6 +27,25 @@ Same MCTS combat, same 50 held-out seeds, A0 Ironclad — only the non-combat "b
 The learned non-combat layer is worth **~11 floors** over the stock bot's heuristics —
 its biggest weakness was never combat, it was walking the map at random.
 
+## Real Steam loop
+
+`steam/` connects the same policy to the real Steam client. CommunicationMod provides
+state and commands, a companion mod exports exact RNG state, and `steam_mcts.py`
+restores a simulator `BattleContext` for exact-state MCTS combat. The learned network
+still handles non-combat choices only; both groups use the same online combat search.
+
+On the high-contrast `BTRU46` integration case, random died on floor 7 and learned
+cleared floor 51. This is integration evidence, not a replacement for the controlled
+50-seed simulator table above. See [`steam/README.md`](steam/README.md).
+
+## Process and auditable evidence
+
+- [`docs/journey.md`](docs/journey.md): LLM-memory agent to small policy network.
+- [`docs/evaluation.md`](docs/evaluation.md): seed leakage and evaluation boundaries.
+- [`docs/training-lessons.md`](docs/training-lessons.md): capacity, curves, early stopping,
+  and learning versus planning.
+- [`results/`](results/): compact metric tracks and reproducible figures.
+
 ## Architecture
 
 ```mermaid
@@ -78,6 +97,9 @@ weights/               trained weights (small MLPs, <2MB each)
   armG_model_G128x128_15k.pt   ← the non-combat policy behind the headline number
 sim_patch/             changes needed on top of sts_lightspeed
   sim_rl_hooks.patch
+steam/                 real-Steam state bridge and exact-state MCTS control
+results/               compact metrics and reproducible figures
+docs/                  journey, evaluation boundary, and training lessons
 ```
 
 ## The interesting negative result
@@ -111,7 +133,7 @@ Difficulty ladder for the hybrid agent (sim2000): A0 38.5 → A5 33.4 → A10 30
    mkdir build312 && cd build312 && cmake .. && make -j4   # needs pybind11 submodule + python3.12
    ```
 
-2. Point the scripts at your build (each script has `SB`/`sys.path` at the top) and run:
+2. Set `STS_LIGHTSPEED_BUILD` to your build directory (see `.env.example`) and run:
 
    ```bash
    # evaluate the shipped non-combat policy + MCTS combat on the 50 eval seeds
@@ -120,8 +142,7 @@ Difficulty ladder for the hybrid agent (sim2000): A0 38.5 → A5 33.4 → A10 30
    STS_SIM_COUNT=2000 PROG_TAG=my_run python agent/armG_train_parallel.py 8000 12 32
    ```
 
-Python deps: `torch`, `tensorboard` (training only). Scripts are research code — paths are
-plain constants, edit them to your layout.
+Python deps: `torch`, `tensorboard` (training only).
 
 Weights are mirrored on HuggingFace: [Jialeiv/sts-rl-agent](https://huggingface.co/Jialeiv/sts-rl-agent).
 
@@ -138,7 +159,10 @@ Weights are mirrored on HuggingFace: [Jialeiv/sts-rl-agent](https://huggingface.
 
 - Simulator: [gamerpuppy/sts_lightspeed](https://github.com/gamerpuppy/sts_lightspeed) (MIT) —
   this project would not exist without it.
+- Real-game bridge: [ForgottenArbiter/CommunicationMod](https://github.com/ForgottenArbiter/CommunicationMod), [ModTheSpire](https://github.com/kiooeht/ModTheSpire), and [BaseMod](https://github.com/daviscook477/BaseMod).
 - This repo: MIT. Slay the Spire is a trademark of Mega Crit Games; this is an unaffiliated
   research project on a clean-room simulator.
+
+See [`docs/acknowledgements.md`](docs/acknowledgements.md) for complete attribution.
 
 Story write-up (Chinese): see the accompanying blog series by *Slow Take*.

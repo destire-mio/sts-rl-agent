@@ -47,6 +47,23 @@ flowchart TB
 
 学习型非战斗层比原生 bot 的启发式**高出约 11 层**——它最大的软肋从来不是打牌,而是选路基本靠随机。
 
+## 真实 Steam 闭环
+
+`steam/` 把同一策略接入真实 Steam 客户端：CommunicationMod 提供状态与命令，
+companion mod 导出精确 RNG，`steam_mcts.py` 从真实快照恢复 `BattleContext` 并执行
+`MCTS@2000`。学习模型仍只负责战斗外决策；两组战斗使用同一在线搜索。
+
+单个高反差 seed `BTRU46` 的真实结果是 random 第 7 层失败、learned 第 51 层通关。
+这是集成案例，不替代上面的 50-seed 模拟器对照。安装与运行见
+[`steam/README.md`](steam/README.md)。
+
+## 过程与可审计证据
+
+- [`docs/journey.md`](docs/journey.md)：从 LLM+记忆 Agent 收缩到小策略网络。
+- [`docs/evaluation.md`](docs/evaluation.md)：训练/评估 seed 泄漏与修正后的评估边界。
+- [`docs/training-lessons.md`](docs/training-lessons.md)：容量、训练曲线、早停与学习/规划分界。
+- [`results/`](results/)：精简训练指标、MCTS 预算对照和可重绘曲线。
+
 ## 目录结构
 
 ```
@@ -71,6 +88,9 @@ weights/               训好的权重(都是小MLP,单个<2MB)
   armG_model_G128x128_15k.pt   ← 核心结果背后的非战斗策略
 sim_patch/             对 sts_lightspeed 的改动
   sim_rl_hooks.patch
+steam/                 真实 Steam 状态桥接 + MCTS 控制
+results/               可审计的小型指标与曲线
+docs/                  过程、评估边界和训练经验
 ```
 
 ## 有意思的负结果
@@ -96,7 +116,7 @@ sim_patch/             对 sts_lightspeed 的改动
    mkdir build312 && cd build312 && cmake .. && make -j4   # 需要 pybind11 子模块 + python3.12
    ```
 
-2. 把脚本顶部的路径常量(`SB`/`sys.path`)改成你的目录,然后:
+2. 通过 `.env.example` 设置 `STS_LIGHTSPEED_BUILD`,然后:
 
    ```bash
    # 用发布的非战斗策略 + MCTS 战斗,在 50 个 eval seed 上评测
@@ -105,7 +125,7 @@ sim_patch/             对 sts_lightspeed 的改动
    STS_SIM_COUNT=2000 PROG_TAG=my_run python agent/armG_train_parallel.py 8000 12 32
    ```
 
-Python 依赖:`torch`、`tensorboard`(仅训练)。这是研究代码——路径是明文常量,按你的环境改。
+Python 依赖:`torch`、`tensorboard`(仅训练)。
 
 权重也镜像在 HuggingFace:[Jialeiv/sts-rl-agent](https://huggingface.co/Jialeiv/sts-rl-agent)。
 
@@ -119,6 +139,9 @@ Python 依赖:`torch`、`tensorboard`(仅训练)。这是研究代码——路�
 ## 致谢与协议
 
 - 模拟器:[gamerpuppy/sts_lightspeed](https://github.com/gamerpuppy/sts_lightspeed)(MIT)——没有它就没有这个项目;
+- 真实游戏桥接:[ForgottenArbiter/CommunicationMod](https://github.com/ForgottenArbiter/CommunicationMod)、[ModTheSpire](https://github.com/kiooeht/ModTheSpire)、[BaseMod](https://github.com/daviscook477/BaseMod);
 - 本仓库:MIT。《杀戮尖塔》(Slay the Spire)是 Mega Crit Games 的商标;本项目是基于净室模拟器的非官方研究项目。
+
+完整鸣谢见 [`docs/acknowledgements.md`](docs/acknowledgements.md)。
 
 中文过程记录(全系列):见 *Slow Take* 的博客系列。

@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-"""画 Arm G 训练曲线(train + eval vs games),标出选卡天花板 35。英文label防方框。
-跑: python plot_armG.py <tag> <out_png>
+"""Plot Arm G train/eval curves from the committed metric tracks.
+
+Run: python eval/plot_armG.py <tag> [out_png]
 """
-import os, sys, json
+import sys, json
+from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-SB = os.environ.get("STS_BOT_DIR", "../sts-bot")
+ROOT = Path(__file__).resolve().parents[1]
 tag = sys.argv[1] if len(sys.argv) > 1 else "G128x128"
-out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(SB, f"armG_{tag}.png")
+out = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / f"results/figures/armG_{tag}.png"
+track = ROOT / f"results/metrics/armG_track_{tag}.jsonl"
 
 g, tr, ev = [], [], []
-for line in open(os.path.join(SB, f"armG_track_{tag}.jsonl")):
+for line in track.open():
     e = json.loads(line); g.append(e["game"]); tr.append(e["train"]); ev.append(e["eval"])
 
 plt.figure(figsize=(9, 5))
